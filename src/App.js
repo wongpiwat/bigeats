@@ -1,107 +1,112 @@
-import React, { Component } from 'react';
-import { API, graphqlOperation } from 'aws-amplify'
+import React, { useState, useEffect } from 'react';
+import { API, graphqlOperation } from 'aws-amplify';
 
-import Header from './Header'
-import Restaurants from './Restaurants'
-import CreateRestaurant from './CreateRestaurant'
-import CreateReview from './CreateReview'
-import Reviews from './Reviews'
-import * as queries from './graphql/queries'
-import * as mutations from './graphql/mutations'
+import Header from './components/Header';
+import Restaurants from './components/Restaurants';
+import CreateRestaurant from './components/CreateRestaurant';
+import CreateReview from './components/CreateReview';
+import Reviews from './components/Reviews';
+import * as queries from './graphql/queries';
+import * as mutations from './graphql/mutations';
 
-class App extends Component {
-  state = {
-    restaurants: [],
-    selectedRestaurant: {},
-    showCreateRestaurant: false,
-    showCreateReview: false,
-    showReviews: false
-  }
-  async componentDidMount() {
+const App = () => {
+  const [restaurants, setRestaurants] = useState([]);
+  const [selectedRestaurant, setSelectedRestaurant] = useState({});
+  const [showCreateRestaurant, setShowCreateRestaurant] = useState(false);
+  const [showCreateReview, setShowCreateReview] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
+
+  useEffect(() => {
+    const fetchRestaurantsAPI = async () => {
+      try {
+        const rdata = await API.graphql(
+          graphqlOperation(queries.listRestaurants)
+        );
+        const {
+          data: {
+            listRestaurants: { items }
+          }
+        } = rdata;
+        console.log('items: ', items);
+        setRestaurants(items);
+      } catch (err) {
+        console.log('error: ', err);
+      }
+    };
+    fetchRestaurantsAPI();
+  }, []);
+
+  const viewReviews = restaurant => {
+    setShowReviews(true);
+    setSelectedRestaurant(restaurant);
+  };
+
+  const createRestaurant = async restaurant => {
+    setRestaurants([...restaurants, restaurant]);
     try {
-      const rdata = await API.graphql(graphqlOperation(queries.listRestaurants))
-      const { data: { listRestaurants: { items }}} = rdata
-      console.log('items: ', items)
-      this.setState({ restaurants: items })
-    } catch(err) {
-      console.log('error: ', err)
+      await API.graphql(
+        graphqlOperation(mutations.createRestaurant, { input: restaurant })
+      );
+    } catch (err) {
+      console.log('error creating restaurant: ', err);
     }
-  }
-  viewReviews = (r) => {
-    this.setState({ showReviews: true, selectedRestaurant: r })
-  }
-  createRestaurant = async(restaurant) => {
-    this.setState({
-      restaurants: [...this.state.restaurants, restaurant]
-    })
-    try {
-      await API.graphql(graphqlOperation(
-        mutations.createRestaurant,
-        {input: restaurant}
-      ))
-    } catch(err) {
-      console.log('error creating restaurant: ', err)
-    }
-  }
-  createReview = async(id, input) => {
-    const restaurants = this.state.restaurants
-    const index = restaurants.findIndex(r => r.id === id)
-    restaurants[index].reviews.items.push(input)
-    this.setState({ restaurants })
-    await API.graphql(graphqlOperation(mutations.createReview, {input}))
-  }
-  closeModal = () => {
-    this.setState({
-      showCreateRestaurant: false,
-      showCreateReview: false,
-      showReviews: false,
-      selectedRestaurant: {}
-    })
-  }
-  showCreateRestaurant = () => {
-    this.setState({ showCreateRestaurant: true })
-  }
-  showCreateReview = r => {
-    this.setState({ selectedRestaurant: r, showCreateReview: true })
-  }
-  render() {
-    return (
-      <div>
-        <Header showCreateRestaurant={this.showCreateRestaurant} />
-        <Restaurants
-          restaurants={this.state.restaurants}
-          showCreateReview={this.showCreateReview}
-          viewReviews={this.viewReviews}
+  };
+
+  const createReview = async input => {
+    await API.graphql(graphqlOperation(mutations.createReview, { input }));
+  };
+
+  const fetchReviews = id => {
+    return API.graphql(graphqlOperation(queries.getRestaurant, { id }));
+  };
+
+  const closeModal = () => {
+    setShowCreateRestaurant(false);
+    setShowCreateReview(false);
+    setShowReviews(false);
+    setSelectedRestaurant({});
+  };
+
+  const onShowCreateRestaurant = () => {
+    setShowCreateRestaurant(true);
+  };
+
+  const onShowCreateReview = restaurant => {
+    setSelectedRestaurant(restaurant);
+    setShowCreateReview(true);
+  };
+
+  return (
+    <div>
+      <Header onShowCreateRestaurant={onShowCreateRestaurant} />
+      <Restaurants
+        restaurants={restaurants}
+        showCreateReview={showCreateReview}
+        viewReviews={viewReviews}
+        onShowCreateReview={onShowCreateReview}
+      />
+      {showCreateRestaurant && (
+        <CreateRestaurant
+          createRestaurant={createRestaurant}
+          onCloseModal={closeModal}
         />
-        {
-          this.state.showCreateRestaurant && (
-            <CreateRestaurant
-              createRestaurant={this.createRestaurant}
-              closeModal={this.closeModal}   
-            />
-          )
-        }
-        {
-          this.state.showCreateReview && (
-            <CreateReview
-              createReview={this.createReview}
-              closeModal={this.closeModal}   
-              restaurant={this.state.selectedRestaurant}
-            />
-          )
-        }
-        {
-          this.state.showReviews && (
-            <Reviews
-              selectedRestaurant={this.state.selectedRestaurant}
-              closeModal={this.closeModal}
-              restaurant={this.state.selectedRestaurant}
-            />
-          )
-        }
-      </div>
-    );
-  }
-}
+      )}
+      {showCreateReview && (
+        <CreateReview
+          restaurant={selectedRestaurant}
+          onCloseModal={closeModal}
+          onCreateReview={createReview}
+        />
+      )}
+      {showReviews && (
+        <Reviews
+          restaurantId={selectedRestaurant.id}
+          onFetchReviews={fetchReviews}
+          onCloseModal={closeModal}
+        />
+      )}
+    </div>
+  );
+};
 
-export default App
+export default App;

@@ -1,14 +1,5 @@
-import React from 'react'
-import { css } from 'glamor'
-
-const Header = ({ showCreateRestaurant }) => (
-  <div {...css(styles.header)}>
-    <p {...css(styles.title)}>BigEats</p>
-    <div {...css(styles.iconContainer)}>
-      <p {...css(styles.icon)} onClick={showCreateRestaurant}>+</p>
-    </div>
-  </div>
-)
+import React from 'react';
+import { css } from 'glamor';
 
 const styles = {
   header: {
@@ -23,11 +14,11 @@ const styles = {
     left: 0,
     right: 0
   },
-  title:{
+  title: {
     margin: 0,
     color: 'white',
     fontWeight: 600,
-    fontSize: 22,
+    fontSize: 22
   },
   iconContainer: {
     display: 'flex',
@@ -39,6 +30,17 @@ const styles = {
     marginRight: 20,
     fontSize: 36
   }
-}
+};
 
-export default Header
+const Header = ({ onShowCreateRestaurant }) => (
+  <div {...css(styles.header)}>
+    <p {...css(styles.title)}>BigEats</p>
+    <div {...css(styles.iconContainer)}>
+      <p {...css(styles.icon)} onClick={onShowCreateRestaurant}>
+        +
+      </p>
+    </div>
+  </div>
+);
+
+export default Header;
